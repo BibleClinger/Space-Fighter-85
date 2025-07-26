@@ -1,0 +1,149 @@
+clear; text.column = 30; text.row = 15; text.color = color.white; print "Loading..."
+
+import "mathUtil"
+import "listUtil"
+import "bclib"
+
+import "variables"
+
+// Basic state machine setup
+
+eStates = bclib.Enum.Create("LOADING TITLE PREPLAYING PLAYING PAUSED GAMEOVER CLEARLEVELSCREEN WINSCREEN CUTSCENE")
+eEvents = bclib.Enum.Create("DONE PAUSE STARTGAME ENDGAME CLEARLEVEL WIN")
+
+states = {}
+
+for s in eStates.names(true)
+    states[eStates[s]] = bclib.Machine.State(eStates[s])
+end for
+
+// States transitions
+
+states[eStates.LOADING].on(eEvents.DONE, eStates.TITLE)
+states[eStates.TITLE].on(eEvents.STARTGAME, eStates.PREPLAYING)
+states[eStates.PREPLAYING].on(eEvents.STARTGAME, eStates.PLAYING)
+states[eStates.PLAYING].on(eEvents.PAUSE, eStates.PAUSED).on(eEvents.ENDGAME, eStates.GAMEOVER).on(eEvents.CLEARLEVEL, eStates.CLEARLEVELSCREEN)
+states[eStates.CLEARLEVELSCREEN].on(eEvents.STARTGAME, eStates.PREPLAYING).on(eEvents.WIN, eStates.WINSCREEN)
+states[eStates.PAUSED].on(eEvents.STARTGAME, eStates.PLAYING)
+states[eStates.WINSCREEN].on(eEvents.DONE, eStates.TITLE)
+states[eStates.GAMEOVER].on(eEvents.DONE, eStates.TITLE)
+
+// State code implementation
+
+states[eStates.LOADING].init = function(self)
+    game.initVariables
+end function
+
+states[eStates.LOADING].enter = function(self)
+    game.clearLayers
+    globals.gameLoaded = true
+    text.column = 30; text.row = 15; text.color = color.white; print "Loaded... 100%"
+end function
+
+states[eStates.LOADING].tick = function(self, delta)
+    if globals.gameLoaded then self.machine.raiseEvent(eEvents.DONE)
+end function
+
+states[eStates.LOADING].exit = function(self)
+    text.clear
+end function
+
+// TITLE state
+
+states[eStates.TITLE].init = function(self)
+    self.centerLabel = bclib.TextLabel.Create({"row":game.SCREEN_TEXT_HEIGHT/2 + game.SCREEN_TEXT_HEIGHT/4, "column":game.SCREEN_TEXT_WIDTH/2, "justification":bclib.TextLabel.eJustificationType.CENTER})
+    game.starManager = StarManager.Create(10, 50, game.starSpriteLayer)
+end function
+
+states[eStates.TITLE].enter = function(self)
+    self.centerLabel.print "Space Fighter 85"
+end function
+
+states[eStates.TITLE].tick = function(self, delta)
+    game.starManager.tick delta
+    if key.pressed("c") then self.machine.raiseEvent(eEvents.STARTGAME)
+end function
+
+states[eStates.TITLE].exit = function(self)
+    self.centerLabel.clear
+end function
+
+// PREPLAYING state
+
+states[eStates.PREPLAYING].enter = function(self)
+    self.machine.raiseEvent(eEvents.STARTGAME)
+end function
+
+// PLAYING state
+
+states[eStates.PLAYING].init = function(self)
+    self.debugLabel = bclib.TextLabel.Create({"row":game.SCREEN_TEXT_HEIGHT-1, "column":game.SCREEN_TEXT_WIDTH/2, "justification":bclib.TextLabel.eJustificationType.CENTER})
+end function
+
+states[eStates.PLAYING].enter = function(self)
+    // game.starManager.setActive true
+    self.input.x = 0
+    self.input.y = 0
+    self.input.a = 0
+    self.input.b = 0
+end function
+
+states[eStates.PLAYING].tick = function(self, delta)
+    game.starManager.tick delta
+
+    dx = 0
+    dy = 0
+
+    // dx = mathUtil.clamp(mouse.x - game.SCREEN_WIDTH/2, -5, 5)
+    // dy = mathUtil.clamp(mouse.y - game.SCREEN_HEIGHT/2, -5, 5)
+
+    mouse.locked = true
+
+    mx = key.axis("Mouse X")
+    my = key.axis("Mouse Y")
+    mz = key.axis("Mouse ScrollWheel")
+    option1 = false
+    option2 = false
+
+    self.input.x += mx
+    self.input.y += (my*-1)
+    self.input.a = mz > 0
+    self.input.b = mz < 0
+
+    self.input.x = mathUtil.clamp(self.input.x, -15, 15)  // Horizontal control
+    self.input.y = mathUtil.clamp(self.input.y, -15, 15) // Vertical control
+
+    // This is if we want dampeners
+    // if mx == 0 then self.input.x = mathUtil.moveTowards(self.input.x, 0, 0.01)
+    // if my == 0 then self.input.y = mathUtil.moveTowards(self.input.y, 0, 0.01)
+
+    self.debugLabel.print "input: " + self.input
+    if key.pressed("q") then self.machine.getContext.engine.quit
+
+    game.starManager.setDrift(self.input.x, self.input.y)
+
+    if key.pressed("m") then mouse.locked = true
+    if key.pressed("n") then mouse.locked = false
+end function
+
+states[eStates.PLAYING].exit = function(self)
+    // mouse.visible = true
+end function
+
+// State machine itself
+
+machine = bclib.Machine.Create(states, eStates.LOADING)
+machine.deinit = function(self, engine)
+    key.clear
+    mouse.locked = false
+end function
+
+machine.init = function(self, engine)
+    self.setContext {"engine":engine}
+    self.start
+end function
+
+// Engine that runs everything
+
+engine = bclib.Engine.Create(machine)
+engine.run
