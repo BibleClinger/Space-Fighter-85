@@ -32,10 +32,10 @@ states[eStates.GAMEOVER].on(eEvents.DONE, eStates.TITLE)
 
 states[eStates.LOADING].init = function(self)
     game.initVariables
+    game.clearLayers
 end function
 
 states[eStates.LOADING].enter = function(self)
-    game.clearLayers
     globals.gameLoaded = true
     text.column = 30; text.row = 15; text.color = color.white; print "Loaded... 100%"
 end function
@@ -78,6 +78,12 @@ end function
 
 states[eStates.PLAYING].init = function(self)
     self.debugLabel = bclib.TextLabel.Create({"row":game.SCREEN_TEXT_HEIGHT-1, "column":game.SCREEN_TEXT_WIDTH/2, "justification":bclib.TextLabel.eJustificationType.CENTER})
+    self.input = {}
+    self.hud = HUD.Create(game.HUDLayer)
+    self.lasers = [
+        Laser.Create(color.blue, 150, {"x":0, "y":0}, {"x":game.SCREEN_WIDTH/2, "y":floor(game.SCREEN_HEIGHT/2 + game.SCREEN_HEIGHT/4)}, game.entitySpriteLayer),
+        Laser.Create(color.red, 150, {"x":game.SCREEN_WIDTH, "y":0}, {"x":game.SCREEN_WIDTH/2, "y":floor(game.SCREEN_HEIGHT/2 + game.SCREEN_HEIGHT/4)}, game.entitySpriteLayer),
+    ]
 end function
 
 states[eStates.PLAYING].enter = function(self)
@@ -86,24 +92,16 @@ states[eStates.PLAYING].enter = function(self)
     self.input.y = 0
     self.input.a = 0
     self.input.b = 0
+    self.hud.renderCockpit
+    self.wasB1 = false
+    mouse.locked = true
 end function
 
 states[eStates.PLAYING].tick = function(self, delta)
     game.starManager.tick delta
-
-    dx = 0
-    dy = 0
-
-    // dx = mathUtil.clamp(mouse.x - game.SCREEN_WIDTH/2, -5, 5)
-    // dy = mathUtil.clamp(mouse.y - game.SCREEN_HEIGHT/2, -5, 5)
-
-    mouse.locked = true
-
     mx = key.axis("Mouse X")
     my = key.axis("Mouse Y")
     mz = key.axis("Mouse ScrollWheel")
-    option1 = false
-    option2 = false
 
     self.input.x += mx
     self.input.y += (my*-1)
@@ -116,6 +114,39 @@ states[eStates.PLAYING].tick = function(self, delta)
     // This is if we want dampeners
     // if mx == 0 then self.input.x = mathUtil.moveTowards(self.input.x, 0, 0.01)
     // if my == 0 then self.input.y = mathUtil.moveTowards(self.input.y, 0, 0.01)
+
+    isB1 = mouse.button
+    if isB1 and not self.wasB1 then
+        doFire = true
+    else
+        doFire = false
+    end if
+    self.wasB1 = isB1
+
+    for laz in self.lasers
+        if doFire then
+            if laz.canFire then
+                laz.fire
+                doFire = false
+            end if
+        end if
+        laz.tick delta
+    end for
+
+    if game.enemies.len == 0 then
+        e = Enemy.Create(500, 500, 200, 0)
+        game.enemies.push e
+        game.entitySpriteLayer.sprites.push e
+    else
+        for i in range(game.enemies.len-1)
+            if game.enemies[i].needsDelete then
+                game.entitySpriteLayer.sprites.removeVal game.enemies[i] // Order is important here and the next line
+                game.enemies.remove i
+            else
+                game.enemies[i].tick delta
+            end if
+        end for
+    end if
 
     self.debugLabel.print "input: " + self.input
     if key.pressed("q") then self.machine.getContext.engine.quit

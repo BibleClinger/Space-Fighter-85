@@ -6,21 +6,28 @@ game.initVariables = function
     game.SCREEN_HEIGHT = 640
     game.SCREEN_TEXT_WIDTH = 68
     game.SCREEN_TEXT_HEIGHT = 26
+    game.MAX_DISTANCE = 1000
+    game.MIN_DISTANCE = 10
 
     // Layer variables
-    game.entitySpriteLayer = display(4)
-    game.starSpriteLayer = new SpriteDisplay
+    game.backgroundLayer = new SolidColorDisplay    // background
+    game.starSpriteLayer = new SpriteDisplay        // Star background
     game.starSpriteLayer.install 6
-    display(6).mode = game.starSpriteLayer.mode
-    game.HUDLayer = display(5)
-    game.backgroundLayer = display(7)
+    game.entitySpriteLayer = new SpriteDisplay
+    game.entitySpriteLayer.install 5                // Entity layer
+    game.HUDLayer = new PixelDisplay
+    game.HUDLayer.install 4                         // HUD layer
+    //                                              // Text layer
 
     // Labels
 
-    // Star Manager
-
     bclib.Functions.importToDestination("Star", globals)
     bclib.Functions.importToDestination("StarManager", globals)
+    bclib.Functions.importToDestination("Enemy", globals)
+    bclib.Functions.importToDestination("HUD", globals)
+    bclib.Functions.importToDestination("Laser", globals)
+
+    game.enemies = []
 
 end function
 
