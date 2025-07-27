@@ -110,6 +110,7 @@ Laser.fire = function(self)
         self.display.sprites.push spr
         self.bCanFire = false
         self.cooldownTimer.start
+        game.sounds["pew"].play
     end if
 end function
 

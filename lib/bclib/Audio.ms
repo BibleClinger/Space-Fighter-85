@@ -50,6 +50,7 @@ Audio.Clip.load = function(src)
     if not instance.snd then return null
     instance.loop = false
     instance._isPlaying = false
+    instance.timer = bclib.Timer.Create(instance.snd.duration, instance, false, true)
     return instance
 end function
 
@@ -60,8 +61,7 @@ end function
 Audio.Clip.play = function(self, volume=1.0, pan=0.0, speed=1.0)
     self._isPlaying = true
     self.snd.play volume, pan, speed
-    if self.loop and not self.get("timer") then self.timer = bclib.Timer.Create(self.snd.duration, self, false, true)
-    if self.get("timer") then self.timer.start // We start timer here in case we had a self.stop called prior
+    self.timer.start // We start timer here in case we had a self.stop called prior
 end function
 
 Audio.Clip.onTimeout = function(self, timer)
@@ -76,11 +76,11 @@ end function
 Audio.Clip.stop = function(self)
     self._isPlaying = false
     self.snd.stop
-    if self.get("timer") then self.timer.pause // We stop calculation of replay timer
+    self.timer.pause // We stop calculation of replay timer
 end function
 
 Audio.Clip.tick = function(self, delta)
-    if self.get("timer") then self.timer.tick delta
+    self.timer.tick delta
 end function
 
 Audio.Clip.deinit = function(self, engine)

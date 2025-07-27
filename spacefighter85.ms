@@ -57,6 +57,7 @@ end function
 
 states[eStates.TITLE].enter = function(self)
     self.centerLabel.print "Space Fighter 85"
+    game.sounds["title_music"].play game.musicVolume
 end function
 
 states[eStates.TITLE].tick = function(self, delta)
@@ -66,6 +67,7 @@ end function
 
 states[eStates.TITLE].exit = function(self)
     self.centerLabel.clear
+    game.sounds["title_music"].stop
 end function
 
 // PREPLAYING state
@@ -95,7 +97,7 @@ states[eStates.PLAYING].enter = function(self)
     self.hud.renderCockpit
     self.wasB1 = false
     mouse.locked = true
-    game.action_music.play
+    game.sounds["soundscape"].play game.musicVolume
 end function
 
 states[eStates.PLAYING].tick = function(self, delta)
@@ -169,6 +171,22 @@ states[eStates.PLAYING].tick = function(self, delta)
 
     logger.trace "- Finished explosions ticking"
 
+    if game.missiles.len > 0 then
+        for i in range(game.missiles.len-1)
+            if game.missiles[i].needsDelete then
+                //explosion = Explosion.Create(game.enemies[i].x, game.enemies[i].y, game.enemies[i].distance)
+                //game.explosions.push explosion
+                //game.entitySpriteLayer.sprites.push explosion
+                game.entitySpriteLayer.sprites.removeVal game.missiles[i] // Order is important here and the next line
+                game.missiles.remove i
+            else
+                game.missiles[i].setDrift(self.input.x, self.input.y)
+                game.missiles[i].tick delta
+            end if
+        end for
+    end if
+
+    logger.trace "- Finished missile ticking"
 
     game.starManager.setDrift self.input.x, self.input.y
     logger.trace "- Finished drifting stars"
@@ -178,7 +196,6 @@ states[eStates.PLAYING].tick = function(self, delta)
 
     self.debugLabel.print "input: " + self.input
     if key.pressed("q") then
-        game.action_music.stop
         self.machine.getContext.engine.quit
     end if
     if key.pressed("m") then mouse.locked = true
@@ -187,7 +204,7 @@ end function
 
 states[eStates.PLAYING].exit = function(self)
     // mouse.visible = true
-    game.action_music.stop
+    // game.sounds["soundscape"].play game.musicVolume
 end function
 
 // State machine itself
@@ -208,4 +225,5 @@ end function
 // Engine that runs everything
 
 engine = bclib.Engine.Create([machine, logger])
+engine.add(game.sounds.values)
 engine.run

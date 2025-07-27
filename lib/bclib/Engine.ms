@@ -50,8 +50,8 @@ Engine.tick = function(self, delta)
         else if i.get("update") then
             i.update delta
         end if
-        if self.doYield then yield // 60 Hz
     end for
+    if self.doYield then yield // 60 Hz
 end function
 
 Engine.run = function(self)

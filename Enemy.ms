@@ -32,13 +32,13 @@ Enemy.Create = function(x, y, heading, distance)
     instance.doClockWise = false
     instance.getCloser = true
     instance.label = bclib.TextLabel.Create({"row":0, "column":0})
-    instance.label2 = bclib.TextLabel.Create({"row":4, "column":0})
+    instance.label2 = bclib.TextLabel.Create({"row":24, "column":0})
 
     instance.localBounds = new Bounds
     instance.localBounds.x = 0
     instance.localBounds.x = 0
-    instance.localBounds.width = self.spriteWidth
-    instance.localBounds.width = self.spriteHeight
+    instance.localBounds.width = instance.spriteWidth
+    instance.localBounds.width = instance.spriteHeight
 
     instance.health = 5
     instance.needsDelete = false
@@ -47,6 +47,11 @@ Enemy.Create = function(x, y, heading, distance)
 
     instance.scaleShip
 
+    instance.bCanFire = true
+    instance.successfulLockTime = 3
+    instance.reloadCooldown = 15
+    instance.cooldownTimer = bclib.Timer.Create(instance.reloadCooldown, instance, false, false, "FIRE")
+    instance.lockTimer = bclib.Timer.Create(instance.successfulLockTime, instance, false, false, "LOCK")
     return instance
 end function
 
@@ -75,8 +80,8 @@ Enemy.confirmImage = function(self)
 end function
 
 Enemy.scaleShip = function(self)
-    self.scale = mathUtil.lerp(1, 0.01, (self.distance-10) / (1000-10))
-    self.label2.print "x: " + self.x + " y: " + self.y + " distance: " + self.distance + " scale: " + self.scale
+    self.scale = mathUtil.lerp(1, 0.03, (self.distance-10) / (1000-10))
+    //self.label2.print "x: " + self.x + " y: " + self.y + " distance: " + self.distance + " scale: " + self.scale
 end function
 
 Enemy.chooseBehavior = function(self)
@@ -86,44 +91,38 @@ Enemy.chooseBehavior = function(self)
 //    end if
 end function
 
-Enemy.doAltBehaviorBroken = function(self, delta)
-
-if self.behavior == self.eBehavior.FLYCLOSE then
-        if heading != 180 then desiredHeading = 180
-        if speed != 1 then desiredSpeed = 1
-        if distance < 200 and heading == 180 and speed == 1 then
-            self.behavior = self.eBehavior.FIREDUMB
-        else
-            self.behavior == self.eBehavior.FLYAWAY
-        end if
-    else if self.behavior == self.eBehavior.FIREDUMB then
-        print "Fire!"
+Enemy.onTimeout = function(self, timer)
+    c = timer.getContext
+    if c == "LOCK" then
+        self.bCanFire = false
+        Missile.Create(self.x, self.y, self.distance, self.front, false)
+        self.cooldownTimer.start
         self.behavior = self.eBehavior.FLYAWAY
-    else if self.behavior == self.eBehavior.FLYAWAY then
-        if heading != 0 then desiredHeading = 0
-        if speed != 2 then desiredSpeed = 2
-        if distance > 800 then
-            self.behavior = self.eBehavior.FLYCLOSE
-            self.doClockWise = floor(rand + 10) % 2
-        end if
-    else if self.behavior == self.eBehavior.FLYLATERAL then
-        
+    else if c == "FIRE" then
+        self.bCanFire = true
     end if
 end function
 
+Enemy.startLock = function(self)
+    self.lockTimer.start
+    self.bLock = true
+end function
+
 Enemy.doBehavior = function(self, delta)
-    // We derp
-    // We can set heading, and we can adjust speed
-    // We can fire on the player
-    // We can blow up
-    //if self.goal == self.eGoal.PATROL then
-    //    if self.heading != self.desiredHeading then self.heading += 1
-    //end if
     if self.behavior == self.eBehavior.FLYCLOSE then
         if self.heading != 180 then self.desiredHeading = 180
         if self.speed != 3 then self.desiredSpeed = 3
-        //if distance < 200 and heading == 180 and speed == 1 then
-        if self.distance < 450 then
+        if not self.front then
+            if self.distance < 500 then
+                self.behavior = self.eBehavior.LOCK
+                self.startLock
+            end if
+        else if self.distance < 600 and self.heading < 190 and self.heading > 170 and self.bCanFire then
+            self.bCanFire = false
+            Missile.Create(self.x, self.y, self.distance, self.front, false)
+            self.cooldownTimer.start
+            self.behavior = self.eBehavior.FLYAWAY
+        else if self.distance < 450 then
             if floor(rnd + 10) % 2 then
                 if floor(rnd + 10) % 2 then self.desiredHeading = 90 else self.desiredHeading = 270
                 self.behavior = self.eBehavior.FLYLATERAL
@@ -138,6 +137,13 @@ Enemy.doBehavior = function(self, delta)
     else if self.behavior == self.eBehavior.FLYLATERAL then
         if self.x < 0 or self.x > game.SCREEN_WIDTH then
             self.behavior = self.eBehavior.FLYAWAY
+        end if
+    else if self.behavior == self.eBehavior.LOCK then
+        if not game.sounds["locking"].isPlaying then game.sounds["locking"].play
+        if self.front then bLock = false
+        if not self.bLock then
+            self.behavior.FLYAWAY
+            self.lockTimer.stop
         end if
     end if
 end function
@@ -194,6 +200,9 @@ Enemy.tick = function(self, delta)
 
     self.confirmImage
     self.scaleShip
+
+    self.lockTimer.tick delta
+    self.cooldownTimer.tick delta
 
     self.wrapProtection
     if self.front then self.tint = color.white else self.tint = color.red
