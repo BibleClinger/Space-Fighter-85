@@ -58,7 +58,7 @@ Missile.setDrift = function(self, dx, dy)
         self.y += dy
     else
         // Drift into cockpit view fast when locked
-        mathUtil.moveTowardsXY(self, instance.target, self.speed)
+        mathUtil.moveTowardsXY(self, self.target, self.speed)
     end if
 end function
 
@@ -70,6 +70,7 @@ end function
 
 Missile.explode = function(self)
     if self.locked then
+        game.sounds["trackedMissile"].stop
         game.playerTakeDamage(self, 2)
     else
         //if self.x > game.SCREEN_WIDTH/2-100 and self.x < game.SCREEN_WIDTH/2+100 and self.y > game.SCREEN_HEIGHT/2-100 and self.y < game.SCREEN_HEIGHT/2+100 and self.distance < 15 then

@@ -114,8 +114,8 @@ states[eStates.PLAYING].tick = function(self, delta)
     self.input.a = mz > 0
     self.input.b = mz < 0
 
-    self.input.x = mathUtil.clamp(self.input.x, -15, 15)  // Horizontal control
-    self.input.y = mathUtil.clamp(self.input.y, -15, 15) // Vertical control
+    self.input.x = mathUtil.clamp(self.input.x, -10, 10)  // Horizontal control
+    self.input.y = mathUtil.clamp(self.input.y, -10, 10) // Vertical control
 
     // This is if we want dampeners
     // if mx == 0 then self.input.x = mathUtil.moveTowards(self.input.x, 0, 0.01)

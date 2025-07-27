@@ -95,7 +95,7 @@ Enemy.onTimeout = function(self, timer)
     c = timer.getContext
     if c == "LOCK" then
         self.bCanFire = false
-        Missile.Create(self.x, self.y, self.distance, self.front, false)
+        Missile.Create(self.x, self.y, self.distance, self.front, true) // Locked missile!
         self.cooldownTimer.start
         self.behavior = self.eBehavior.FLYAWAY
     else if c == "FIRE" then
@@ -111,7 +111,7 @@ end function
 Enemy.doBehavior = function(self, delta)
     if self.behavior == self.eBehavior.FLYCLOSE then
         if self.heading != 180 then self.desiredHeading = 180
-        if self.speed != 3 then self.desiredSpeed = 3
+        if self.speed != 1 then self.desiredSpeed = 1
         if not self.front then
             if self.distance < 500 then
                 self.behavior = self.eBehavior.LOCK
@@ -132,9 +132,10 @@ Enemy.doBehavior = function(self, delta)
         end if
     else if self.behavior == self.eBehavior.FLYAWAY then
         if self.heading != 0 then self.desiredHeading = 0
-        if self.speed != 4 then self.desiredSpeed = 4
+        if self.speed != 2 then self.desiredSpeed = 2
         if self.distance > 750 then self.behavior = self.eBehavior.FLYCLOSE
     else if self.behavior == self.eBehavior.FLYLATERAL then
+        if self.speed != 3 then self.desiredSpeed = 3
         if self.x < 0 or self.x > game.SCREEN_WIDTH then
             self.behavior = self.eBehavior.FLYAWAY
         end if
@@ -144,6 +145,7 @@ Enemy.doBehavior = function(self, delta)
         if not self.bLock then
             self.behavior.FLYAWAY
             self.lockTimer.stop
+            game.sounds["locking"].stop
         end if
     end if
 end function
