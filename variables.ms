@@ -9,6 +9,12 @@ game.initVariables = function
     game.MAX_DISTANCE = 1000
     game.MIN_DISTANCE = 10
 
+    // Sounds
+
+    game.action_music = bclib.Audio.Clip.load("sounds/actionsoundtrack.ogg")
+    game.action_music.loop = true
+    engine.add(game.action_music)
+
     // Layer variables
     game.backgroundLayer = new SolidColorDisplay    // background
     game.starSpriteLayer = new SpriteDisplay        // Star background

@@ -34,7 +34,9 @@ HUD.setDrift = function(self, dx, dy)
     if dy < 0 then self.compassY.rotation = 90 else self.compassY.rotation = 270
 
     self.compassX.scale = [mathUtil.lerp(0, 0.5, abs(dx/15)), 0.1]
+    self.compassX.x = game.SCREEN_WIDTH/2 + game.SCREEN_WIDTH/2*self.compassX.scale
     self.compassY.scale = [mathUtil.lerp(0, 0.5, abs(dy/15)), 0.1]
+    self.compassX.y = 100 + 100*self.compassY.scale
 end function
 
 HUD.tick = function(self, delta)
@@ -43,11 +45,20 @@ HUD.tick = function(self, delta)
     for e in game.enemies
         s = new Sprite
         s.image = HUD.enemyAbove
-        s.scale = 0.2
+        s.scale = [0.1, 0.5]
         if e.y >= game.SCREEN_HEIGHT/2 then s.tint = color.red else s.tint = color.blue
-        if e.heading > 90 and e.heading < 270 then s.rotation = 180 else s.rotation = 0
-        s.x = mathUtil.lerp(722, 940, (e.x - e.leftLimit) / (e.rightLimit - e.leftLimit))
-        s.y = mathUtil.lerp(160, 290, (e.distance - 10) / (1000 - 10))
+        //if e.heading > 90 and e.heading < 270 then s.rotation = 180 else s.rotation = 0
+
+        if e.front then
+            s.rotation = e.heading
+            s.x = mathUtil.lerp(722, 940, (e.x - e.leftLimit) / (e.rightLimit - e.leftLimit))
+            s.y = mathUtil.lerp(160, 270, (e.distance - 10) / (1000 - 10))
+        else
+            s.rotation = 180 - e.heading
+            if s.rotation < 0 then s.rotation += 360
+            s.x = mathUtil.lerp(722, 940, ((game.SCREEN_WIDTH - e.x) - e.leftLimit) / (e.rightLimit - e.leftLimit))
+            s.y = mathUtil.lerp(150, 60, (e.distance - 10) / (1000 - 10))
+        end if
         game.HUDSpriteLayer.sprites.push s
     end for
 end function

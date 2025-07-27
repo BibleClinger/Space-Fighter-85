@@ -95,7 +95,7 @@ end function
 
 Laser.checkHitBox = function(self)
     for e in game.enemies
-        if self.hitZone.overlaps(e.worldBounds) then
+        if e.front and self.hitZone.overlaps(e.worldBounds) then
             e.takeDamage(1)
             break
         end if

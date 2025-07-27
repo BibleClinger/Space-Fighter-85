@@ -43,6 +43,10 @@ Enemy.Create = function(x, y, heading, distance)
     instance.health = 5
     instance.needsDelete = false
 
+    instance.front = true
+
+    instance.scaleShip
+
     return instance
 end function
 
@@ -192,6 +196,7 @@ Enemy.tick = function(self, delta)
     self.scaleShip
 
     self.wrapProtection
+    if self.front then self.tint = color.white else self.tint = color.red
 end function
 
 Enemy.leftLimit = function(self)
@@ -203,24 +208,22 @@ Enemy.rightLimit = function(self)
 end function
 
 Enemy.wrapProtection = function(self)
-    if self.x < (-self.spriteWidth*self.scale) then self.x = game.SCREEN_WIDTH + self.spriteWidth*self.scale
-    if self.x > game.SCREEN_WIDTH + self.spriteWidth*self.scale then self.x = -self.spriteWidth*self.scale
-
-    if self.y < (-self.spriteHeight*self.scale) then self.y = game.SCREEN_HEIGHT + self.spriteHeight*self.scale
-    if self.y > game.SCREEN_HEIGHT + self.spriteHeight*self.scale then self.y = -self.spriteHeight*self.scale
-end function
-
-Enemy.brokenCorrectPLacement = function
-    if self.x > game.SCREEN_WIDTH then
-        self.x = 0
-    else if self.x < game.SCREEN_WIDTH then
-        self.x = game.SCREEN_WIDTH
+    //if self.x < self.leftLimit then self.x = game.SCREEN_WIDTH + self.spriteWidth*self.scale
+    if self.x < self.leftLimit then
+        self.x = self.rightLimit - 1
+        self.front = not self.front
+    else if self.x > self.rightLimit then
+    //if self.x > self.rightLimit + self.spriteWidth*self.scale then self.x = -self.spriteWidth*self.scale
+        self.x = self.leftLimit + 1
+        self.front = not self.front
     end if
 
-    if self.y > game.SCREEN_HEIGHT then
-        self.y = 500
-    else if self.y < game.SCREEN_HEIGHT then
-        self.y = 500
+    if self.y < (-self.spriteHeight*self.scale) then
+        self.y = game.SCREEN_HEIGHT + self.spriteHeight*self.scale
+        self.front = not self.front
+    else if self.y > game.SCREEN_HEIGHT + self.spriteHeight*self.scale then
+        self.y = -self.spriteHeight*self.scale
+        self.front = not self.front
     end if
 end function
 

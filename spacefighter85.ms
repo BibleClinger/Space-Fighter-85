@@ -95,6 +95,7 @@ states[eStates.PLAYING].enter = function(self)
     self.hud.renderCockpit
     self.wasB1 = false
     mouse.locked = true
+    game.action_music.play
 end function
 
 states[eStates.PLAYING].tick = function(self, delta)
@@ -140,11 +141,12 @@ states[eStates.PLAYING].tick = function(self, delta)
 
     logger.trace "- Finished laser firing"
 
-    if game.enemies.len == 0 then
-        e = Enemy.Create(500, 500, 200, 500)
+    while game.enemies.len < 2
+        e = Enemy.Create(ceil(mathUtil.randRange(0, game.SCREEN_WIDTH)), ceil(mathUtil.randRange(0, game.SCREEN_HEIGHT)), ceil(mathUtil.randRange(0, 359)), ceil(mathUtil.randRange(700, 900)))
         game.enemies.push e
         game.entitySpriteLayer.sprites.push e
-    else
+    end while
+    if game.enemies.len > 0 then
         for i in range(game.enemies.len-1)
             if game.enemies[i].needsDelete then
                 //explosion = Explosion.Create(game.enemies[i].x, game.enemies[i].y, game.enemies[i].distance)
@@ -175,13 +177,17 @@ states[eStates.PLAYING].tick = function(self, delta)
     self.hud.tick delta
 
     self.debugLabel.print "input: " + self.input
-    if key.pressed("q") then self.machine.getContext.engine.quit
+    if key.pressed("q") then
+        game.action_music.stop
+        self.machine.getContext.engine.quit
+    end if
     if key.pressed("m") then mouse.locked = true
     if key.pressed("n") then mouse.locked = false
 end function
 
 states[eStates.PLAYING].exit = function(self)
     // mouse.visible = true
+    game.action_music.stop
 end function
 
 // State machine itself
