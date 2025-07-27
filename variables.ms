@@ -18,17 +18,21 @@ game.initVariables = function
     game.HUDLayer = new PixelDisplay
     game.HUDLayer.install 4                         // HUD layer
     //                                              // Text layer
+    game.HUDSpriteLayer = new SpriteDisplay
+    game.HUDSpriteLayer.install 2                   // Sprite HUD layer
 
     // Labels
 
+    bclib.Functions.importToDestination("spriteControllers", globals)
     bclib.Functions.importToDestination("Star", globals)
     bclib.Functions.importToDestination("StarManager", globals)
     bclib.Functions.importToDestination("Enemy", globals)
     bclib.Functions.importToDestination("HUD", globals)
     bclib.Functions.importToDestination("Laser", globals)
+    bclib.Functions.importToDestination("Explosion", globals)
 
     game.enemies = []
-
+    game.explosions = []
 end function
 
 game.clearLayers = function

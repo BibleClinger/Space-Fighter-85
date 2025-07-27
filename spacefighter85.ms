@@ -98,7 +98,10 @@ states[eStates.PLAYING].enter = function(self)
 end function
 
 states[eStates.PLAYING].tick = function(self, delta)
+    logger.trace "Inside state::Playing tick"
     game.starManager.tick delta
+    logger.trace "- Finished starManager tick"
+    
     mx = key.axis("Mouse X")
     my = key.axis("Mouse Y")
     mz = key.axis("Mouse ScrollWheel")
@@ -123,6 +126,8 @@ states[eStates.PLAYING].tick = function(self, delta)
     end if
     self.wasB1 = isB1
 
+    logger.trace "- Finished input gathering"
+
     for laz in self.lasers
         if doFire then
             if laz.canFire then
@@ -133,26 +138,44 @@ states[eStates.PLAYING].tick = function(self, delta)
         laz.tick delta
     end for
 
+    logger.trace "- Finished laser firing"
+
     if game.enemies.len == 0 then
-        e = Enemy.Create(500, 500, 200, 0)
+        e = Enemy.Create(500, 500, 200, 500)
         game.enemies.push e
         game.entitySpriteLayer.sprites.push e
     else
         for i in range(game.enemies.len-1)
             if game.enemies[i].needsDelete then
+                //explosion = Explosion.Create(game.enemies[i].x, game.enemies[i].y, game.enemies[i].distance)
+                //game.explosions.push explosion
+                //game.entitySpriteLayer.sprites.push explosion
                 game.entitySpriteLayer.sprites.removeVal game.enemies[i] // Order is important here and the next line
                 game.enemies.remove i
             else
+                game.enemies[i].setDrift(self.input.x, self.input.y)
                 game.enemies[i].tick delta
             end if
         end for
     end if
 
+    logger.trace "- Finished Enemy tick"
+
+    //for i in range(game.explosions-1)
+        //game.explosions.tick delta
+    //end for
+
+    logger.trace "- Finished explosions ticking"
+
+
+    game.starManager.setDrift self.input.x, self.input.y
+    logger.trace "- Finished drifting stars"
+
+    self.hud.setDrift self.input.x, self.input.y
+    self.hud.tick delta
+
     self.debugLabel.print "input: " + self.input
     if key.pressed("q") then self.machine.getContext.engine.quit
-
-    game.starManager.setDrift(self.input.x, self.input.y)
-
     if key.pressed("m") then mouse.locked = true
     if key.pressed("n") then mouse.locked = false
 end function
@@ -162,6 +185,8 @@ states[eStates.PLAYING].exit = function(self)
 end function
 
 // State machine itself
+
+logger = bclib.Logger.Create(file.open("log/hello.log", "w"))
 
 machine = bclib.Machine.Create(states, eStates.LOADING)
 machine.deinit = function(self, engine)
@@ -176,5 +201,5 @@ end function
 
 // Engine that runs everything
 
-engine = bclib.Engine.Create(machine)
+engine = bclib.Engine.Create([machine, logger])
 engine.run
