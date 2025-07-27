@@ -31,7 +31,7 @@ states[eStates.GAMEOVER].on(eEvents.DONE, eStates.TITLE)
 // State code implementation
 
 states[eStates.LOADING].init = function(self)
-    game.initVariables
+    // game.initVariables // We do this on import now if "variables"
     game.clearLayers
 end function
 
@@ -56,6 +56,7 @@ states[eStates.TITLE].init = function(self)
 end function
 
 states[eStates.TITLE].enter = function(self)
+    game.reset
     self.centerLabel.print "Space Fighter 85"
     game.sounds["title_music"].play game.musicVolume
 end function
@@ -79,6 +80,15 @@ end function
 // PLAYING state
 
 states[eStates.PLAYING].init = function(self)
+
+    onTimeout = function(timer)
+        game.bCanCounter = true
+    end function
+
+    onNextWave = function(time)
+        
+    end function
+
     self.debugLabel = bclib.TextLabel.Create({"row":game.SCREEN_TEXT_HEIGHT-1, "column":game.SCREEN_TEXT_WIDTH/2, "justification":bclib.TextLabel.eJustificationType.CENTER})
     self.input = {}
     self.hud = HUD.Create(game.HUDLayer)
@@ -86,6 +96,8 @@ states[eStates.PLAYING].init = function(self)
         Laser.Create(color.blue, 150, {"x":0, "y":0}, {"x":game.SCREEN_WIDTH/2, "y":floor(game.SCREEN_HEIGHT/2 + game.SCREEN_HEIGHT/4)}, game.entitySpriteLayer),
         Laser.Create(color.red, 150, {"x":game.SCREEN_WIDTH, "y":0}, {"x":game.SCREEN_WIDTH/2, "y":floor(game.SCREEN_HEIGHT/2 + game.SCREEN_HEIGHT/4)}, game.entitySpriteLayer),
     ]
+    self.counterCooldownTimer = bclib.Timer.Create(game.counterCooldownAmount, @onTimeout, false, false)
+    self.nextWaveTimer = bclib.Timer.Create(0, @onNextWave, false, false)
 end function
 
 states[eStates.PLAYING].enter = function(self)
@@ -96,8 +108,16 @@ states[eStates.PLAYING].enter = function(self)
     self.input.b = 0
     self.hud.renderCockpit
     self.wasB1 = false
+    self.wasB2 = false
+    game.bCanCounter = true
     mouse.locked = true
+
+    if Levels.mode == Levels.eLevelMode.CAMPAIGN then
+        self.planets = Planet.Create(ceil(mathUtil.randRange(0, game.SCREEN_WIDTH)), ceil(mathUtil.randRange(0, game.SCREEN_HEIGHT)), Levels.Campaign[Levels.level].planets, -1)
+    end if
+    self.canProceedWave = true
     game.sounds["soundscape"].play game.musicVolume
+    game.setTickerMsg "Let's go!"
 end function
 
 states[eStates.PLAYING].tick = function(self, delta)
@@ -118,8 +138,8 @@ states[eStates.PLAYING].tick = function(self, delta)
     self.input.y = mathUtil.clamp(self.input.y, -10, 10) // Vertical control
 
     // This is if we want dampeners
-    // if mx == 0 then self.input.x = mathUtil.moveTowards(self.input.x, 0, 0.01)
-    // if my == 0 then self.input.y = mathUtil.moveTowards(self.input.y, 0, 0.01)
+    if mx == 0 and abs(self.input.x) < 2 then self.input.x = mathUtil.moveTowards(self.input.x, 0, 0.001)
+    if my == 0 and abs(self.input.y) < 2 then self.input.y = mathUtil.moveTowards(self.input.y, 0, 0.001)
 
     isB1 = mouse.button
     if isB1 and not self.wasB1 then
@@ -128,6 +148,20 @@ states[eStates.PLAYING].tick = function(self, delta)
         doFire = false
     end if
     self.wasB1 = isB1
+
+    isB2 = mouse.button(1)
+    if isB2 and not self.wasB2 then
+        if not game.bCanCounter then
+            doCounter = false
+        else
+            doCounter = true
+            game.bCanCounter = false
+            self.counterCooldownTimer.start
+        end if
+    else
+        doCounter = false
+    end if
+    self.wasB2 = isB2
 
     logger.trace "- Finished input gathering"
 
@@ -143,11 +177,35 @@ states[eStates.PLAYING].tick = function(self, delta)
 
     logger.trace "- Finished laser firing"
 
-    while game.enemies.len < 2
-        e = Enemy.Create(ceil(mathUtil.randRange(0, game.SCREEN_WIDTH)), ceil(mathUtil.randRange(0, game.SCREEN_HEIGHT)), ceil(mathUtil.randRange(0, 359)), ceil(mathUtil.randRange(700, 900)))
-        game.enemies.push e
-        game.entitySpriteLayer.sprites.push e
-    end while
+    //while game.enemies.len < 3
+        //pool = [Enemy, Satellite]
+        // e = pool.any.Create(ceil(mathUtil.randRange(0, game.SCREEN_WIDTH)), ceil(mathUtil.randRange(0, game.SCREEN_HEIGHT)), ceil(mathUtil.randRange(0, 359)), ceil(mathUtil.randRange(700, 900)))
+        //e = Satellite.Create(ceil(mathUtil.randRange(0, game.SCREEN_WIDTH)), ceil(mathUtil.randRange(0, game.SCREEN_HEIGHT)), ceil(mathUtil.randRange(0, 359)), ceil(mathUtil.randRange(700, 900)))
+    //    e = Enemy.Create(ceil(mathUtil.randRange(0, game.SCREEN_WIDTH)), ceil(mathUtil.randRange(0, game.SCREEN_HEIGHT)), ceil(mathUtil.randRange(0, 359)), ceil(mathUtil.randRange(700, 900)))
+    //    game.enemies.push e
+    //    game.entitySpriteLayer.sprites.push e
+    //end while
+
+    if self.canProceedWave and Levels.wave < Levels.Campaign[Levels.level].waves.len then
+        w = Levels.Campaign[Levels.level].waves[Levels.wave]
+        self.canProceedWave = false
+        self.nextWaveTimer.restart w.predelay
+    end if
+        // spawn wave
+        for i in range(0, w.amount)
+            dir = Level.resolveDirection(w.direction)
+            distance = Level.resolveDistance(w.distance)
+            e = w.type.Create(direction.x, direction.y, ceil(mathUtil.randRange(-1, 360)), distance)
+            e.front = dir.front
+            game.enemies.push e
+            game.entitySpriteLayer.sprites.push e
+        end for
+    end if
+
+    self.planets.setDrift self.input.x, self.input.y
+    self.planets.tick delta
+
+    bEnemyLock = false
     if game.enemies.len > 0 then
         for i in range(game.enemies.len-1)
             if game.enemies[i].needsDelete then
@@ -159,8 +217,15 @@ states[eStates.PLAYING].tick = function(self, delta)
             else
                 game.enemies[i].setDrift(self.input.x, self.input.y)
                 game.enemies[i].tick delta
+                if game.enemies[i].isLocking then bEnemyLock = true
             end if
         end for
+    end if
+    self.hud.showLock bEnemyLock
+    if bEnemyLock then
+        if not game.sounds["locking"].isPlaying then game.sounds["locking"].play game.sfxVolume
+    else
+        game.sounds["locking"].stop
     end if
 
     logger.trace "- Finished Enemy tick"
@@ -171,6 +236,7 @@ states[eStates.PLAYING].tick = function(self, delta)
 
     logger.trace "- Finished explosions ticking"
 
+    bMissileLock = false
     if game.missiles.len > 0 then
         for i in range(game.missiles.len-1)
             if game.missiles[i].needsDelete then
@@ -180,10 +246,20 @@ states[eStates.PLAYING].tick = function(self, delta)
                 game.entitySpriteLayer.sprites.removeVal game.missiles[i] // Order is important here and the next line
                 game.missiles.remove i
             else
+                if doCounter then
+                    game.missiles[i].getCountered
+                end if
                 game.missiles[i].setDrift(self.input.x, self.input.y)
                 game.missiles[i].tick delta
+                if game.missiles[i].isLocking then bMissileLock = true
             end if
         end for
+    end if
+    self.hud.showLaunch bMissileLock
+    if bMissileLock then
+        if not game.sounds["trackedMissile"].isPlaying then game.sounds["trackedMissile"].play game.sfxVolume
+    else
+        game.sounds["trackedMissile"].stop
     end if
 
     logger.trace "- Finished missile ticking"
@@ -192,7 +268,9 @@ states[eStates.PLAYING].tick = function(self, delta)
     logger.trace "- Finished drifting stars"
 
     self.hud.setDrift self.input.x, self.input.y
-    self.hud.tick delta
+    self.hud.tick delta, self.counterCooldownTimer.timeLeft / game.counterCooldownAmount
+
+    self.counterCooldownTimer.tick delta
 
     self.debugLabel.print "input: " + self.input
     if key.pressed("q") then
@@ -200,11 +278,65 @@ states[eStates.PLAYING].tick = function(self, delta)
     end if
     if key.pressed("m") then mouse.locked = true
     if key.pressed("n") then mouse.locked = false
+
+    if game.playerHealth <= 0 then self.machine.raiseEvent(eEvents.ENDGAME)
 end function
 
 states[eStates.PLAYING].exit = function(self)
     // mouse.visible = true
     // game.sounds["soundscape"].play game.musicVolume
+    self.debugLabel.clear
+    game.sounds["locking"].stop
+    game.sounds["trackedMissile"].stop
+end function
+
+states[eStates.GAMEOVER].init = function(self)
+    machine = self.machine
+    onTimeout = function(timer)
+        machine.raiseEvent(eEvents.DONE)
+    end function
+
+    self.label = bclib.TextLabel.Create({"row":game.SCREEN_TEXT_HEIGHT/2, "column":game.SCREEN_TEXT_WIDTH/2, "justification":bclib.TextLabel.eJustificationType.CENTER})
+    self.timer = bclib.Timer.Create(5, @onTimeout, false, false)
+end function
+
+states[eStates.GAMEOVER].enter = function(self)
+    // game.starManager.setActive true
+    game.enemies = []
+    game.missiles = []
+    game.entitySpriteLayer.clear
+
+    game.HUDSpriteLayer.clear
+    game.HUDLayer.clear
+
+    text.clear
+
+    game.sounds["soundscape"].stop
+    game.sounds["action_music"].stop
+
+    self.label.print "GAME OVER"
+
+    self.timer.start
+end function
+
+states[eStates.GAMEOVER].tick = function(self, delta)
+    self.timer.tick delta
+end function
+
+states[eStates.GAMEOVER].exit = function(self)
+    self.label.clear
+end function
+
+states[eStates.CLEARLEVELSCREEN].enter = function(self)
+
+end function
+
+states[eStates.CLEARLEVELSCREEN].tick = function(self, delta)
+
+end function
+
+states[eStates.CLEARLEVELSCREEN].exit = function(self)
+
 end function
 
 // State machine itself
@@ -225,5 +357,6 @@ end function
 // Engine that runs everything
 
 engine = bclib.Engine.Create([machine, logger])
-engine.add(game.sounds.values)
+engine.add game.sounds.values
+engine.add game.tickerTimer
 engine.run

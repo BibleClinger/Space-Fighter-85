@@ -1,8 +1,10 @@
 Enemy = new Sprite
 Enemy.degrees = range(180, 0, -22.5) + range(360-22.5, 180+22.5, -22.5)
+Enemy.HUDimage = file.loadImage("/sys/pics/shapes/TriangleThin.png")
 Enemy.imageBank = {}
 Enemy.spriteWidth = 512
 Enemy.spriteHeight = 512
+Enemy.health = 5
 Enemy.maxSpeed = 5
 Enemy.src = file.loadImage("images/enemy-spritesheet.png")
 d = 0
@@ -38,7 +40,7 @@ Enemy.Create = function(x, y, heading, distance)
     instance.localBounds.x = 0
     instance.localBounds.x = 0
     instance.localBounds.width = instance.spriteWidth
-    instance.localBounds.width = instance.spriteHeight
+    instance.localBounds.height = instance.spriteHeight
 
     instance.health = 5
     instance.needsDelete = false
@@ -48,6 +50,7 @@ Enemy.Create = function(x, y, heading, distance)
     instance.scaleShip
 
     instance.bCanFire = true
+    instance.bLock = false
     instance.successfulLockTime = 3
     instance.reloadCooldown = 15
     instance.cooldownTimer = bclib.Timer.Create(instance.reloadCooldown, instance, false, false, "FIRE")
@@ -80,7 +83,7 @@ Enemy.confirmImage = function(self)
 end function
 
 Enemy.scaleShip = function(self)
-    self.scale = mathUtil.lerp(1, 0.03, (self.distance-10) / (1000-10))
+    self.scale = mathUtil.lerp(0.9, 0.03, (self.distance) / (1000))
     //self.label2.print "x: " + self.x + " y: " + self.y + " distance: " + self.distance + " scale: " + self.scale
 end function
 
@@ -98,6 +101,8 @@ Enemy.onTimeout = function(self, timer)
         Missile.Create(self.x, self.y, self.distance, self.front, true) // Locked missile!
         self.cooldownTimer.start
         self.behavior = self.eBehavior.FLYAWAY
+        //game.sounds["locking"].stop
+        self.bLock = false
     else if c == "FIRE" then
         self.bCanFire = true
     end if
@@ -106,6 +111,10 @@ end function
 Enemy.startLock = function(self)
     self.lockTimer.start
     self.bLock = true
+end function
+
+Enemy.isLocking = function(self)
+    return self.bLock
 end function
 
 Enemy.doBehavior = function(self, delta)
@@ -140,12 +149,12 @@ Enemy.doBehavior = function(self, delta)
             self.behavior = self.eBehavior.FLYAWAY
         end if
     else if self.behavior == self.eBehavior.LOCK then
-        if not game.sounds["locking"].isPlaying then game.sounds["locking"].play
-        if self.front then bLock = false
+        //if not game.sounds["locking"].isPlaying then game.sounds["locking"].play
+        if self.front then self.bLock = false
         if not self.bLock then
-            self.behavior.FLYAWAY
+            self.behavior = self.eBehavior.FLYAWAY
             self.lockTimer.stop
-            game.sounds["locking"].stop
+            //game.sounds["locking"].stop
         end if
     end if
 end function
@@ -239,8 +248,13 @@ Enemy.wrapProtection = function(self)
 end function
 
 Enemy.takeDamage = function(self, damage)
+    if self.heading < 90 or self.heading > 270 then damage = damage*2
     self.health -= damage
-    if self.health <= 0 then self.needsDelete = true
+    if self.health <= 0 then
+        self.needsDelete = true
+        game.sounds["pew_explode"].play game.sfxVolume
+        game.enemiesKilled += 1
+    end if
 end function
 
 return Enemy

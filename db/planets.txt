@@ -1,0 +1,5 @@
+Signal: "Never give up! Never surrender!"
+Signal: Civilian radio station detected. It's boring.
+Signal: Receiving historical records.
+Signal: 01001000 01100101 01101100 01101100 01101111
+Signal: "Just sit right back and you'll hear a tale, a tale of a fateful trip..."

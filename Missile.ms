@@ -1,6 +1,6 @@
 Missile = new Sprite
 Missile.image = file.loadImage("images/missile.png")
-Missile.speed = 15
+Missile.speed = 10
 
 Missile.degrees = range(180, 0, -22.5) + range(360-22.5, 180+22.5, -22.5)
 Missile.imageBank = {}
@@ -44,9 +44,6 @@ Missile.Create = function(x, y, distance, front, locked)
 
     instance.scaleObject
 
-    instance.label = bclib.TextLabel.Create({"row":20, "column":0})
-    instance.label.print "front is: " + front + " Lock: " + instance.locked
-
     game.missiles.push instance
     game.entitySpriteLayer.sprites.push instance
     return instance
@@ -58,31 +55,34 @@ Missile.setDrift = function(self, dx, dy)
         self.y += dy
     else
         // Drift into cockpit view fast when locked
-        mathUtil.moveTowardsXY(self, self.target, self.speed)
+        mathUtil.moveTowardsXY(self, self.target, 1) // ceil(self.speed / 5)
     end if
 end function
 
 Missile.getCountered = function(self)
     if self.locked then
         self.locked = false
+        // game.sounds["trackedMissile"].stop
+        game.missilesCountered += 1
     end if
 end function 
 
 Missile.explode = function(self)
     if self.locked then
-        game.sounds["trackedMissile"].stop
+        //game.sounds["trackedMissile"].stop
         game.playerTakeDamage(self, 2)
+        game.missilesTaken += 1
+    else if game.isInZone(self) and self.distance <= 10 then
+        game.playerTakeDamage(self, 1)
+        game.missilesTaken += 1
     else
-        //if self.x > game.SCREEN_WIDTH/2-100 and self.x < game.SCREEN_WIDTH/2+100 and self.y > game.SCREEN_HEIGHT/2-100 and self.y < game.SCREEN_HEIGHT/2+100 and self.distance < 15 then
-        if self.x > 267 and self.x < 693 and self.y > 345 and self.y < 544 and self.distance < 15 then
-            game.playerTakeDamage(self, 1)
-        end if
+        game.missilesDodged += 1
     end if
     self.needsDelete = true
 end function
 
 Missile.tick = function(self, delta)
-    if self.locked and not game.sounds["trackedMissile"].isPlaying then game.sounds["trackedMissile"].play
+    //if self.locked and not game.sounds["trackedMissile"].isPlaying then game.sounds["trackedMissile"].play game.sfxVolume
     self.distance -= self.speed
     self.scaleObject
     if self.distance <= 10 or self.distance > 1000 then
@@ -90,7 +90,7 @@ Missile.tick = function(self, delta)
     end if
     self.wrapProtection
     if self.front then self.tint = color.white else self.tint = color.red
-    self.label.print "Front: " + self.front + " Distance: " + self.distance
+    //self.label.print "Front: " + self.front + " Distance: " + self.distance
 end function
 
 Missile.wrapProtection = function(self)
@@ -110,6 +110,10 @@ Missile.wrapProtection = function(self)
         self.y = -self.image.height*self.scale
         self.front = not self.front
     end if
+end function
+
+Missile.isLocking = function(self)
+    return self.locked
 end function
 
 Missile.scaleObject = function(self)

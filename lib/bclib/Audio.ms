@@ -76,7 +76,8 @@ end function
 Audio.Clip.stop = function(self)
     self._isPlaying = false
     self.snd.stop
-    self.timer.pause // We stop calculation of replay timer
+    // self.timer.pause // We stop calculation of replay timer
+    self.timer.stop // We need to stop the timer, not pause it.
 end function
 
 Audio.Clip.tick = function(self, delta)

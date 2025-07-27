@@ -1,0 +1,6 @@
+Congratulations. You may proceed to the next level.
+Message from command... Warp is allowed.
+New coordinates received from command. Please warp when ready.
+Captain, you have been cleared to warp.
+Bug out. Get to the next sector.
+Time to leave. Warp now.

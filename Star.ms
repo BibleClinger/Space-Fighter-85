@@ -2,7 +2,7 @@ Star = new Sprite
 Star.image = file.loadImage("/sys/pics/shapes/Circle.png")
 Star.maxScale = 0.1
 Star.minScale = 0.01
-Star.speed = 2
+Star.speed = 4
 Star.startColor = color.clear
 Star.endColor = color.white
 
@@ -31,11 +31,11 @@ end function
 Star.move = function(self, delta, awayPoint, dx, dy)
     self.rotation = atan(self.y - awayPoint.y, self.x - awayPoint.x) * 180/pi // Look away from the awayPoint
     ang = self.rotation * pi/180
-    self.speed += 0.01
+    self.speed += 0.02
     if dx == 0 then dx = 1
     if dy == 0 then dy = 1
-	self.x = self.x + cos(ang) * self.speed * abs(dx)
-	self.y = self.y + sin(ang) * self.speed * abs(dy)
+	self.x = self.x + cos(ang) * (self.speed + abs(dx))
+	self.y = self.y + sin(ang) * (self.speed + abs(dy))
 end function
 
 Star.tick = function(self, delta, dx, dy)
@@ -47,18 +47,10 @@ Star.tick = function(self, delta, dx, dy)
         self.lerptick += 0.1
     end if
 
-    p = {"x":game.SCREEN_WIDTH/2, "y":game.SCREEN_HEIGHT/2} // By default we push stars away from center of screen
-    if dx > 0 then // Player turning right
-        p.x = game.SCREEN_WIDTH // We want to push stars to left
-    else if dx < 0 then // Player turning left
-        p.x = 0 // We want to push stars to the right
-    end if
-
-    if dy > 0 then
-        p.y = 0
-    else if dy < 0 then
-        p.y = game.SCREEN_HEIGHT
-    end if
+    p = {
+        "x" : mathUtil.lerp(0, game.SCREEN_WIDTH, (dx+10) / (10+10)),
+        "y" : mathUtil.lerp(game.SCREEN_HEIGHT, 0, (dy+10) / (10+10)),
+    }
 
     self.move delta, p, dx, dy
 
